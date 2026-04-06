@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cloud Secure - Bucket S3 seguro con cifrado AES-256 y politica HTTPS only
+
+Resources:
+
+# ----------------------------
+# 🔒 S3 BUCKET SEGURO
+# ----------------------------
+
+  SecureS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "cloudsecure-${AWS::AccountId}-${AWS::Region}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+# ----------------------------
+# 📜 BUCKET POLICY (Solo HTTPS)
+# ----------------------------
+
+  SecureBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SecureS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "${SecureS3Bucket.Arn}"
+              - !Sub "${SecureS3Bucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+Outputs:
+
+  SecureBucketName:
+    Description: Nombre del bucket S3 seguro
+    Value: !Ref SecureS3Bucket
+
+  SecureBucketArn:
+    Description: ARN del bucket S3 seguro
+    Value: !GetAtt SecureS3Bucket.Arn

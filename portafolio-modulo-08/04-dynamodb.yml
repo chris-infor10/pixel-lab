@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Inteligente - Tabla DynamoDB para almacenamiento de Pedidos
+
+Resources:
+
+# ----------------------------
+# 🗄️ DYNAMODB TABLE: PEDIDOS
+# ----------------------------
+
+  PedidosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Pedidos
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+
+Outputs:
+
+  PedidosTableName:
+    Description: Nombre de la tabla DynamoDB
+    Value: !Ref PedidosTable
+
+  PedidosTableArn:
+    Description: ARN de la tabla DynamoDB
+    Value: !GetAtt PedidosTable.Arn

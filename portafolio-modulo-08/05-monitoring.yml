@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Inteligente - CloudWatch Log Groups para funciones Lambda
+
+Resources:
+
+# ----------------------------
+# 📋 LOG GROUP LAMBDA USUARIOS
+# ----------------------------
+
+  LogGroupUsuarios:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/UsuariosFunction
+      RetentionInDays: 7
+
+# ----------------------------
+# 📋 LOG GROUP LAMBDA PEDIDOS
+# ----------------------------
+
+  LogGroupPedidos:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/PedidosFunction
+      RetentionInDays: 7
+
+Outputs:
+
+  LogGroupUsuariosName:
+    Description: Nombre del Log Group de UsuariosFunction
+    Value: !Ref LogGroupUsuarios
+
+  LogGroupPedidosName:
+    Description: Nombre del Log Group de PedidosFunction
+    Value: !Ref LogGroupPedidos

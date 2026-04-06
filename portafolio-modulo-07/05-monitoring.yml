@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MicroPay - CloudWatch Log Groups para microservicios ECS
+
+Resources:
+
+# ----------------------------
+# 📋 LOG GROUP USUARIOS
+# ----------------------------
+
+  LogGroupUsuarios:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/micropay/usuarios
+      RetentionInDays: 7
+
+# ----------------------------
+# 📋 LOG GROUP PAGOS
+# ----------------------------
+
+  LogGroupPagos:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/micropay/pagos
+      RetentionInDays: 7
+
+Outputs:
+
+  LogGroupUsuariosName:
+    Description: Nombre del Log Group de Usuarios
+    Value: !Ref LogGroupUsuarios
+
+  LogGroupPagosName:
+    Description: Nombre del Log Group de Pagos
+    Value: !Ref LogGroupPagos

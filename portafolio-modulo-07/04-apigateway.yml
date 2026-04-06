@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MicroPay - HTTP API Gateway con rutas /usuarios y /pagos
+
+Parameters:
+
+  IPUsuarios:
+    Type: String
+    Description: IP publica del contenedor de Usuarios en ECS
+    Default: "0.0.0.0"
+
+  IPPagos:
+    Type: String
+    Description: IP publica del contenedor de Pagos en ECS
+    Default: "0.0.0.0"
+
+Resources:
+
+# ----------------------------
+# 🌐 HTTP API GATEWAY
+# ----------------------------
+
+  MicroPayAPI:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: micropay-api
+      ProtocolType: HTTP
+      Description: API Gateway para microservicios MicroPay
+
+# ----------------------------
+# 🔗 INTEGRACIONES HTTP
+# ----------------------------
+
+  IntegracionUsuarios:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref MicroPayAPI
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "http://${IPUsuarios}:3000"
+      PayloadFormatVersion: "1.0"
+
+  IntegracionPagos:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref MicroPayAPI
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      IntegrationUri: !Sub "http://${IPPagos}:3000"
+      PayloadFormatVersion: "1.0"
+
+# ----------------------------
+# 🛤️ RUTAS
+# ----------------------------
+
+  RutaUsuarios:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MicroPayAPI
+      RouteKey: "GET /usuarios"
+      Target: !Sub "integrations/${IntegracionUsuarios}"
+
+  RutaPagos:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MicroPayAPI
+      RouteKey: "GET /pagos"
+      Target: !Sub "integrations/${IntegracionPagos}"
+
+# ----------------------------
+# 🚀 STAGE (AUTO-DEPLOY)
+# ----------------------------
+
+  StageDefault:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref MicroPayAPI
+      StageName: "$default"
+      AutoDeploy: true
+
+Outputs:
+
+  APIGatewayURL:
+    Description: URL base de la API Gateway
+    Value: !Sub "https://${MicroPayAPI}.execute-api.${AWS::Region}.amazonaws.com"
+
+  URLUsuarios:
+    Description: Endpoint microservicio Usuarios
+    Value: !Sub "https://${MicroPayAPI}.execute-api.${AWS::Region}.amazonaws.com/usuarios"
+
+  URLPagos:
+    Description: Endpoint microservicio Pagos
+    Value: !Sub "https://${MicroPayAPI}.execute-api.${AWS::Region}.amazonaws.com/pagos"

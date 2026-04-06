@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MicroPay - Cluster ECS Fargate, Task Definitions y Servicios
+
+Resources:
+
+# ----------------------------
+# 🧠 ECS CLUSTER
+# ----------------------------
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: MicroPayCluster
+
+# ----------------------------
+# 👤 TASK DEFINITION: USUARIOS
+# ----------------------------
+
+  TaskUsuarios:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: usuarios-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: arn:aws:iam::866240658957:role/LabRole
+      ContainerDefinitions:
+        - Name: usuarios
+          Image: 866240658957.dkr.ecr.us-east-1.amazonaws.com/usuarios:latest
+          PortMappings:
+            - ContainerPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/micropay/usuarios
+              awslogs-region: us-east-1
+              awslogs-stream-prefix: ecs
+
+# ----------------------------
+# 💳 TASK DEFINITION: PAGOS
+# ----------------------------
+
+  TaskPagos:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: pagos-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: arn:aws:iam::866240658957:role/LabRole
+      ContainerDefinitions:
+        - Name: pagos
+          Image: 866240658957.dkr.ecr.us-east-1.amazonaws.com/pagos:latest
+          PortMappings:
+            - ContainerPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/micropay/pagos
+              awslogs-region: us-east-1
+              awslogs-stream-prefix: ecs
+
+# ----------------------------
+# 🚀 SERVICIO: USUARIOS
+# ----------------------------
+
+  ServiceUsuarios:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: servicio-usuarios
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DesiredCount: 1
+      TaskDefinition: !Ref TaskUsuarios
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !ImportValue MicroPayPublicSubnetId
+          SecurityGroups:
+            - !ImportValue MicroPaySecurityGroupId
+
+# ----------------------------
+# 🚀 SERVICIO: PAGOS
+# ----------------------------
+
+  ServicePagos:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: servicio-pagos
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DesiredCount: 1
+      TaskDefinition: !Ref TaskPagos
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !ImportValue MicroPayPublicSubnetId
+          SecurityGroups:
+            - !ImportValue MicroPaySecurityGroupId
+
+Outputs:
+
+  ECSClusterName:
+    Description: Nombre del Cluster ECS
+    Value: !Ref ECSCluster

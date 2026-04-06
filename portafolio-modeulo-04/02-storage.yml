@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infraestructura Viva - Almacenamiento S3
+
+Resources:
+
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: infraestructura-viva-app-christian-cortez
+      LifecycleConfiguration:
+        Rules:
+          - Id: MoveToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: GLACIER
+            ExpirationInDays: 365
+
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: infraestructura-viva-backup-christian-cortez

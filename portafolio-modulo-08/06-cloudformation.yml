@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Proyecto Serverless Inteligente FINAL (Compatible AWS Academy)
+
+Resources:
+
+# -------------------------
+# S3 BUCKET (Sitio Web)
+# -------------------------
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+
+# -------------------------
+# DYNAMODB
+# -------------------------
+  PedidosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Pedidos
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+
+# -------------------------
+# LAMBDA USUARIOS
+# -------------------------
+  LambdaUsuarios:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: UsuariosFunction
+      Runtime: python3.9
+      Handler: index.handler
+      Role: arn:aws:iam::866240658957:role/LabRole
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Microservicio Usuarios funcionando'
+              }
+
+# -------------------------
+# LAMBDA PEDIDOS
+# -------------------------
+  LambdaPedidos:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: PedidosFunction
+      Runtime: python3.9
+      Handler: index.handler
+      Role: arn:aws:iam::866240658957:role/LabRole
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import uuid
+
+          dynamodb = boto3.resource('dynamodb')
+          table = dynamodb.Table('Pedidos')
+
+          def handler(event, context):
+              order_id = str(uuid.uuid4())
+
+              table.put_item(
+                  Item={
+                      'orderId': order_id,
+                      'detalle': 'Pedido creado desde Lambda'
+                  }
+              )
+
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({
+                      'mensaje': 'Pedido creado',
+                      'orderId': order_id
+                  })
+              }
+
+# -------------------------
+# API GATEWAY
+# -------------------------
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: ServerlessAPI
+      ProtocolType: HTTP
+
+# INTEGRACIONES
+  UsuariosIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt LambdaUsuarios.Arn
+      PayloadFormatVersion: "2.0"
+
+  PedidosIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt LambdaPedidos.Arn
+      PayloadFormatVersion: "2.0"
+
+# RUTAS
+  UsuariosRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /usuarios
+      Target: !Join [ "/", [ "integrations", !Ref UsuariosIntegration ] ]
+
+  PedidosRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /pedidos
+      Target: !Join [ "/", [ "integrations", !Ref PedidosIntegration ] ]
+
+# STAGE
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: "$default"
+      AutoDeploy: true
+
+# PERMISOS PARA API GATEWAY
+  LambdaPermissionUsuarios:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaUsuarios
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+  LambdaPermissionPedidos:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaPedidos
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+# OUTPUT
+Outputs:
+  ApiURL:
+    Description: URL del API
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"

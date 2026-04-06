@@ -1,0 +1,150 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Microservicios Usuarios y Pagos en ECS Fargate
+
+Resources:
+
+# ----------------------------
+# 🌐 RED (VPC)
+# ----------------------------
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  Route:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RouteTable
+
+# ----------------------------
+# 🔒 SECURITY GROUP
+# ----------------------------
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permitir HTTP
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+# ----------------------------
+# 🧠 ECS CLUSTER
+# ----------------------------
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+# ----------------------------
+# 👤 TASK USUARIOS
+# ----------------------------
+
+  TaskUsuarios:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: usuarios-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: arn:aws:iam::866240658957:role/LabRole
+      ContainerDefinitions:
+        - Name: usuarios
+          Image: 866240658957.dkr.ecr.us-east-1.amazonaws.com/usuarios:latest
+          PortMappings:
+            - ContainerPort: 3000
+
+# ----------------------------
+# 💳 TASK PAGOS
+# ----------------------------
+
+  TaskPagos:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: pagos-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: arn:aws:iam::866240658957:role/LabRole
+      ContainerDefinitions:
+        - Name: pagos
+          Image: 866240658957.dkr.ecr.us-east-1.amazonaws.com/pagos:latest
+          PortMappings:
+            - ContainerPort: 3000
+
+# ----------------------------
+# 🚀 SERVICIO USUARIOS
+# ----------------------------
+
+  ServiceUsuarios:
+    Type: AWS::ECS::Service
+    DependsOn: AttachGateway
+    Properties:
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DesiredCount: 1
+      TaskDefinition: !Ref TaskUsuarios
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet
+          SecurityGroups:
+            - !Ref SecurityGroup
+
+# ----------------------------
+# 🚀 SERVICIO PAGOS
+# ----------------------------
+
+  ServicePagos:
+    Type: AWS::ECS::Service
+    DependsOn: AttachGateway
+    Properties:
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DesiredCount: 1
+      TaskDefinition: !Ref TaskPagos
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet
+          SecurityGroups:
+            - !Ref SecurityGroup

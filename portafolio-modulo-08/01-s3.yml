@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Inteligente - Bucket S3 para sitio web estático
+
+Resources:
+
+# ----------------------------
+# 🪣 S3 BUCKET (Sitio Web Estático)
+# ----------------------------
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+
+# ----------------------------
+# 🔓 BUCKET POLICY (Acceso público)
+# ----------------------------
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+Outputs:
+
+  BucketName:
+    Description: Nombre del bucket S3
+    Value: !Ref S3Bucket
+
+  WebsiteURL:
+    Description: URL del sitio web estático
+    Value: !GetAtt S3Bucket.WebsiteURL

@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cloud Secure - Regla AWS Config para verificar que ningun bucket S3 sea publico
+
+Resources:
+
+# ----------------------------
+# ✅ AWS CONFIG RULE
+# ----------------------------
+# NOTA: El ConfigurationRecorder debe activarse manualmente en la consola
+# antes de desplegar este stack. CloudFormation solo crea la regla de evaluacion.
+
+  ConfigRule:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: s3-bucket-public-read-prohibited
+      Description: Verifica que ningun bucket S3 tenga acceso publico de lectura habilitado
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+
+Outputs:
+
+  ConfigRuleName:
+    Description: Nombre de la regla AWS Config
+    Value: !Ref ConfigRule
+
+  ConfigRuleDescription:
+    Description: Descripcion de la regla aplicada
+    Value: "Verifica que ningun bucket S3 tenga acceso publico de lectura (s3-bucket-public-read-prohibited)"

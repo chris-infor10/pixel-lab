@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Inteligente - HTTP API Gateway con rutas /usuarios y /pedidos
+
+Resources:
+
+# ----------------------------
+# 🌐 HTTP API GATEWAY
+# ----------------------------
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: ServerlessAPI
+      ProtocolType: HTTP
+
+# ----------------------------
+# 🔗 INTEGRACIONES (AWS_PROXY → Lambda)
+# ----------------------------
+
+  UsuariosIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:866240658957:function:UsuariosFunction/invocations"
+      PayloadFormatVersion: "2.0"
+
+  PedidosIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:866240658957:function:PedidosFunction/invocations"
+      PayloadFormatVersion: "2.0"
+
+# ----------------------------
+# 🛤️ RUTAS
+# ----------------------------
+
+  UsuariosRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /usuarios
+      Target: !Join [ "/", [ "integrations", !Ref UsuariosIntegration ] ]
+
+  PedidosRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /pedidos
+      Target: !Join [ "/", [ "integrations", !Ref PedidosIntegration ] ]
+
+# ----------------------------
+# 🚀 STAGE (AUTO-DEPLOY)
+# ----------------------------
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: "$default"
+      AutoDeploy: true
+
+# ----------------------------
+# 🔑 PERMISOS LAMBDA
+# ----------------------------
+
+  LambdaPermissionUsuarios:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: UsuariosFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+  LambdaPermissionPedidos:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: PedidosFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+Outputs:
+
+  ApiURL:
+    Description: URL base del API Gateway
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  URLUsuarios:
+    Description: Endpoint microservicio Usuarios
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/usuarios"
+
+  URLPedidos:
+    Description: Endpoint microservicio Pedidos
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/pedidos"
